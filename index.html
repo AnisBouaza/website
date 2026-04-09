@@ -1,1 +1,40 @@
-"hello world test 123"
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anis Xeno</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header class="site-header">
+        <a class="site-title" href="index.html">Anis Xeno</a>
+        <nav class="site-nav">
+            <a href="index.html">Drawings</a>
+        </nav>
+    </header>
+    <main class="page">
+        <section class="gallery" id="gallery"></section>
+    </main>
+    <footer class="site-footer">
+        <p>© 2026 Anis Xeno</p>
+    </footer>
+    <div class="viewer" id="viewer" aria-hidden="true">
+        <button class="viewer-close" id="viewerClose" aria-label="Close">×</button>
+        <div class="viewer-content">
+            <aside class="viewer-info">
+                <h1 id="viewerTitle">Untitled</h1>
+                <div class="tag-list" id="viewerTags"></div>
+                <p id="viewerDescription">Description placeholder.</p>
+            </aside>
+            <div class="viewer-image-wrap">
+                <div class="viewer-images" id="viewerImages"></div>
+            </div>
+        </div>
+    </div>
+    <script src="js/main.js"></script>
+</body>
+</html>

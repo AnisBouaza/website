@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header class="site-header">
+        <a class="site-title" href="index.html">Anis Xeno</a>
+        <nav class="site-nav">
+            <a href="index.html">Drawings</a>
+        </nav>
+    </header>
+    <main class="page dashboard">
+        <section>
+            <form class="upload-form" id="uploadForm" enctype="multipart/form-data">
+                <div class="field">
+                    <label for="uploadTitle">Title</label>
+                    <input id="uploadTitle" name="title" type="text" required>
+                </div>
+                <div class="field">
+                    <label for="uploadDescription">Description</label>
+                    <textarea id="uploadDescription" name="description"></textarea>
+                </div>
+                <div class="field">
+                    <label for="uploadTagsInput">Tags</label>
+                    <div class="tag-editor" id="uploadTagsEditor">
+                        <div class="tag-list tag-list-editor"></div>
+                        <input id="uploadTagsInput" class="tag-input" type="text">
+                    </div>
+                    <p class="field-hint">Comma separated.</p>
+                    <input id="uploadTags" name="tags" type="hidden">
+                </div>
+                <div class="field">
+                    <label>Image</label>
+                    <input id="uploadImage" name="image" type="file" accept="image/*" multiple hidden>
+                </div>
+                <div class="upload-preview-list" id="uploadPreviewList"></div>
+                <div class="button-row">
+                    <button class="button" type="submit">Upload</button>
+                </div>
+            </form>
+            <p class="status" id="uploadStatus"></p>
+        </section>
+        <section class="dashboard-list" id="dashboardList"></section>
+    </main>
+    <footer class="site-footer">
+        <p>© 2026 Anis Xeno</p>
+    </footer>
+    <script src="js/dashboard.js"></script>
+</body>
+</html>
