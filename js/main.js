@@ -149,17 +149,16 @@ const createViewerImage = (src, alt) => {
         }
     });
 
-    // Mobile pinch-to-zoom
+    // Mobile pinch-to-zoom — only intercepts 2-finger gestures
     image.addEventListener("touchstart", (event) => {
         if (event.touches.length === 2) {
-            event.preventDefault();
             isPinching = true;
             pinchTarget = image;
             pinchStartDist = getPinchDist(event.touches);
             const center = getPinchCenter(event.touches);
             image.style.transformOrigin = getZoomOrigin(image, center.x, center.y);
         }
-    }, { passive: false });
+    }, { passive: true });
 
     image.addEventListener("touchmove", (event) => {
         if (isPinching && event.touches.length === 2 && pinchTarget === image) {
@@ -360,6 +359,9 @@ document.addEventListener("keydown", (event) => {
 });
 
 // Swipe navigation (mobile) — on the entire viewer
+// Uses direction locking: once vertical scroll is detected, swipe is disabled for that gesture
+let touchDirectionLocked = false;
+
 viewer.addEventListener("touchstart", (event) => {
     if (event.touches.length !== 1) return;
     if (zoomedImage) return;
@@ -368,17 +370,31 @@ viewer.addEventListener("touchstart", (event) => {
     touchStartY = event.touches[0].clientY;
     touchStartTime = Date.now();
     isSwiping = false;
+    touchDirectionLocked = false;
 }, { passive: true });
 
 viewer.addEventListener("touchmove", (event) => {
     if (event.touches.length !== 1) return;
     if (zoomedImage) return;
+    if (touchDirectionLocked) return;
 
     const dx = event.touches[0].clientX - touchStartX;
     const dy = event.touches[0].clientY - touchStartY;
+    const absDx = Math.abs(dx);
+    const absDy = Math.abs(dy);
 
-    // Only treat as swipe if horizontal movement dominates
-    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 15) {
+    // Wait until there's enough movement to determine direction
+    if (absDx < 10 && absDy < 10) return;
+
+    // Lock direction: if vertical wins, disable swipe for this gesture
+    if (absDy > absDx) {
+        touchDirectionLocked = true;
+        isSwiping = false;
+        return;
+    }
+
+    // Horizontal clearly dominates — flag as swipe
+    if (absDx > 30 && absDx > absDy * 2) {
         isSwiping = true;
     }
 }, { passive: true });
@@ -390,8 +406,7 @@ viewer.addEventListener("touchend", (event) => {
     const dx = event.changedTouches[0].clientX - touchStartX;
     const elapsed = Date.now() - touchStartTime;
 
-    // Require minimum distance and maximum time for a swipe
-    if (Math.abs(dx) > 50 && elapsed < 500) {
+    if (Math.abs(dx) > 60 && elapsed < 400) {
         navigateViewer(dx > 0 ? -1 : 1);
     }
 
