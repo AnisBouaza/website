@@ -3,14 +3,20 @@
         "id": "6ce6d657-fa9e-463d-ad42-bafa9b613ad5",
         "title": "Medivh",
         "description": "",
-        "tags": [],
+        "tags": [
+            "Fanart",
+            "Drawing"
+        ],
         "image_path": "/uploads/d40f95b412f141af818709ea7c40950a-medivh.png"
     },
     {
         "id": "0784d952-2b10-4291-a2b7-74810fa7da1c",
         "title": "Illidan Stormrage",
         "description": "",
-        "tags": [],
+        "tags": [
+            "Drawing",
+            "Fanart"
+        ],
         "image_path": "/uploads/cb84af6798f84fe4a6d406a9fddaf97e-illidan.png"
     },
     {
@@ -27,35 +33,51 @@
         "id": "c1ab957a-7821-4976-8c89-176fc5ac22c3",
         "title": "drapery 2",
         "description": "",
-        "tags": [],
+        "tags": [
+            "Studies",
+            "Drapery"
+        ],
         "image_path": "/uploads/be314562fc224e2a8b2e4133710e1475-drapery_practice_2.png"
     },
     {
         "id": "b3aee62e-8e6d-4325-b5a0-347e92aa898a",
         "title": "Smoll Knight",
         "description": "",
-        "tags": [],
+        "tags": [
+            "Drawing"
+        ],
         "image_path": "/uploads/74f5f61f898c408fbf04b125b670a8e4-knightsmall.jpg"
     },
     {
         "id": "f541e274-9e09-4aff-add9-e502c4f3a769",
         "title": "drapery 1",
         "description": "",
-        "tags": [],
+        "tags": [
+            "Studies",
+            "Drapery"
+        ],
         "image_path": "/uploads/9a6fed78ef9445be8701722023c7c136-drapery_practice_1.png"
     },
     {
         "id": "0f62e238-e27e-4c54-af5b-a99182fcdd0b",
         "title": "Hands anatomy #1",
         "description": "",
-        "tags": [],
+        "tags": [
+            "Anatomy",
+            "Studies",
+            "Hands"
+        ],
         "image_path": "/uploads/cc0cd93e368e4de1841ae55d05204246-anatomy_hands_course.jpg"
     },
     {
         "id": "e3b04b8e-f655-4fd0-91a7-fd052aac3c63",
         "title": "Arm anatomy studies #1",
         "description": "",
-        "tags": [],
+        "tags": [
+            "Anatomy",
+            "Studies",
+            "Arms"
+        ],
         "image_path": "/uploads/3292dff9ae144d46a1a3252b9039e9fa-anatomy_course_arm.jpg"
     },
     {
@@ -64,8 +86,8 @@
         "description": "",
         "tags": [
             "Anatomy",
-            "Legs",
-            "Study"
+            "Studies",
+            "Legs"
         ],
         "image_path": "/uploads/a0562d2912dd410b9f7772c54cf05b73-anatomy_course_legs.jpg"
     },
@@ -73,14 +95,20 @@
         "id": "307ac3db-73d7-4d6e-9ad0-3a66da117841",
         "title": "Mannequins #1",
         "description": "",
-        "tags": [],
+        "tags": [
+            "Studies",
+            "Figure Drawing"
+        ],
         "image_path": "/uploads/d1cb6a9b087e41ce913ad309f50180f7-posing_gesture.jpg"
     },
     {
         "id": "efe91c68-ce18-4c88-bf36-6adfde4d77bc",
         "title": "Frog dragon concept  art",
         "description": "",
-        "tags": [],
+        "tags": [
+            "Concept Art",
+            "Dragons"
+        ],
         "image_path": "/uploads/87a9ec9236b9401f8845117a2bbd5aae-frog_dragon4.jpg",
         "image_paths": [
             "/uploads/87a9ec9236b9401f8845117a2bbd5aae-frog_dragon4.jpg",
@@ -90,38 +118,53 @@
         ]
     },
     {
-        "id": "daac34fc-f800-4d69-bfd0-d29d87ef4ede",
-        "title": "Arms anatomy practice",
-        "description": "",
-        "tags": [],
-        "image_path": "/uploads/4384694ce51440a582f0c4b23f4de2f9-anatomy_arms_practice.jpg"
-    },
-    {
         "id": "7c1e4d02-4adc-4cce-9aec-18509bd4282d",
         "title": "Hands practice #1",
         "description": "",
-        "tags": [],
+        "tags": [
+            "Anatomy",
+            "Studies",
+            "Hands"
+        ],
         "image_path": "/uploads/4e76e9e948e54010a8c939554f9adbb5-anatomy_hands_practice.jpg"
+    },
+    {
+        "id": "daac34fc-f800-4d69-bfd0-d29d87ef4ede",
+        "title": "Arms anatomy practice",
+        "description": "",
+        "tags": [
+            "Anatomy",
+            "Studies",
+            "Arms"
+        ],
+        "image_path": "/uploads/4384694ce51440a582f0c4b23f4de2f9-anatomy_arms_practice.jpg"
     },
     {
         "id": "8c1ef00c-8a13-4f10-94d5-32d4668cb72f",
         "title": "Cool drawings",
         "description": "",
-        "tags": [],
+        "tags": [
+            "Studies",
+            "Fanart"
+        ],
         "image_path": "/uploads/4637442351664176811a5ed838138e31-dk.jpg"
     },
     {
         "id": "c773f242-0b33-49d9-a6e2-f275ebf28dd4",
         "title": "Satyr OC",
         "description": "",
-        "tags": [],
+        "tags": [
+            "Drawing"
+        ],
         "image_path": "/uploads/e4693d77e4ab4aa88a61fe9b6c8c6c62-satyr.jpg"
     },
     {
         "id": "6e2d8855-66dd-41fd-ab66-c84cf3734d2b",
         "title": "Centaur OC",
         "description": "",
-        "tags": [],
+        "tags": [
+            "Drawing"
+        ],
         "image_path": "/uploads/ecadf873b624414c8c62af793a544b3b-centaur.jpg"
     },
     {
@@ -129,9 +172,8 @@
         "title": "HxH characters",
         "description": "",
         "tags": [
-            "Fun",
             "Manga",
-            "HxH"
+            "Drawing"
         ],
         "image_path": "/uploads/9534f97182e44ea0a6c8f7b47ae56f7d-HxH_Montage--Final.jpg"
     },
@@ -140,9 +182,8 @@
         "title": "Kite and Ging",
         "description": "",
         "tags": [
-            "Fun",
             "Manga",
-            "HxH"
+            "Drawing"
         ],
         "image_path": "/uploads/60fc5b9d572f4afd8b54a3a9be78fafe-HxH_Backup.jpg"
     },
@@ -150,28 +191,38 @@
         "id": "6a624820-3371-44c3-a0c1-76b50edf3383",
         "title": "Heads",
         "description": "",
-        "tags": [],
+        "tags": [
+            "Studies"
+        ],
         "image_path": "/uploads/0a028b78c27841039334fd27731c8f98-simplified-head---practice--2.jpg"
     },
     {
         "id": "20f21d42-b6bd-4469-9368-cac55d69e236",
         "title": "Birds",
         "description": "",
-        "tags": [],
+        "tags": [
+            "Drawing"
+        ],
         "image_path": "/uploads/0103c9b11cd6472d96963b19b8dd094d-birds.jpg"
     },
     {
         "id": "c1b27625-1731-46fa-8730-d3eea2459aed",
         "title": "Dragons",
         "description": "",
-        "tags": [],
+        "tags": [
+            "Drawing",
+            "Concept Art",
+            "Dragons"
+        ],
         "image_path": "/uploads/fd27873f32784b3bbe6ab2f3a9b959fb-dargons.jpg"
     },
     {
         "id": "6450c104-7ead-4f53-8e78-e595afefa9c3",
         "title": "Animals",
         "description": "",
-        "tags": [],
+        "tags": [
+            "Studies"
+        ],
         "image_path": "/uploads/575149fabb404ed2ab0197bedc883b4f-organic.jpg"
     }
 ]
