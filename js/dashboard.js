@@ -1,54 +1,6 @@
-const dashboardList = document.getElementById("dashboardList");
-const uploadForm = document.getElementById("uploadForm");
-const uploadStatus = document.getElementById("uploadStatus");
-const uploadTagsEditorRoot = document.getElementById("uploadTagsEditor");
-const uploadTagsField = document.getElementById("uploadTags");
-const uploadImageInput = document.getElementById("uploadImage");
-const uploadPreviewList = document.getElementById("uploadPreviewList");
-let draggedRow = null;
-let dragGhost = null;
-let dropLine = null;
-let pointerOffsetX = 0;
-let pointerOffsetY = 0;
-let startOrder = [];
-let pendingUploads = [];
-let draggedUpload = null;
-let uploadDragGhost = null;
-let uploadDropMarker = null;
-let uploadPointerOffsetX = 0;
-let uploadPointerOffsetY = 0;
-const saveTimers = new Map();
-
-const setStatus = (message, isError = false) => {
-    uploadStatus.textContent = message;
-    uploadStatus.style.color = isError ? "#a00000" : "#000000";
-};
-
-const normalizeTag = (value) => value.trim().replace(/\s+/g, " ");
-
-const uniqueTags = (values) => {
-    const seen = new Set();
-    const tags = [];
-
-    values.forEach((value) => {
-        const tag = normalizeTag(value);
-
-        if (!tag) {
-            return;
-        }
-
-        const key = tag.toLowerCase();
-
-        if (seen.has(key)) {
-            return;
-        }
-
-        seen.add(key);
-        tags.push(tag);
-    });
-
-    return tags;
-};
+// ---------------------------------------------------------------------------
+// Shared helpers
+// ---------------------------------------------------------------------------
 
 const normalizeArtwork = (item) => ({
     ...item,
@@ -58,31 +10,204 @@ const normalizeArtwork = (item) => ({
         : Array.isArray(item.image_paths)
             ? item.image_paths
             : [item.image_url || item.image_path].filter(Boolean),
-    image_url: item.image_url || item.image_path || (Array.isArray(item.image_paths) ? item.image_paths[0] : "")
+    image_url: item.image_url || item.image_path || (Array.isArray(item.image_paths) ? item.image_paths[0] : ""),
 });
+
+const normalizeTag = (value) => value.trim().replace(/\s+/g, " ");
+
+const uniqueTags = (values) => {
+    const seen = new Set();
+    const tags = [];
+
+    values.forEach((value) => {
+        const tag = normalizeTag(value);
+        if (!tag) return;
+        const key = tag.toLowerCase();
+        if (seen.has(key)) return;
+        seen.add(key);
+        tags.push(tag);
+    });
+
+    return tags;
+};
+
+// ---------------------------------------------------------------------------
+// DOM refs
+// ---------------------------------------------------------------------------
+
+const dashboardList = document.getElementById("dashboardList");
+const uploadForm = document.getElementById("uploadForm");
+const uploadStatus = document.getElementById("uploadStatus");
+const uploadTagsEditorRoot = document.getElementById("uploadTagsEditor");
+const uploadTagsField = document.getElementById("uploadTags");
+const uploadImageInput = document.getElementById("uploadImage");
+const uploadPreviewList = document.getElementById("uploadPreviewList");
+const uploadTagPickerRoot = document.getElementById("uploadTagPicker");
+const tagLibraryInput = document.getElementById("tagLibraryInput");
+const tagLibraryAddButton = document.getElementById("tagLibraryAdd");
+const tagLibraryListEl = document.getElementById("tagLibraryList");
+
+// ---------------------------------------------------------------------------
+// State
+// ---------------------------------------------------------------------------
+
+let pendingUploads = [];
+let tagLibrary = [];
+const saveTimers = new Map();
+
+// ---------------------------------------------------------------------------
+// Status
+// ---------------------------------------------------------------------------
+
+const setStatus = (message, isError = false) => {
+    uploadStatus.textContent = message;
+    uploadStatus.style.color = isError ? "#a00000" : "#000000";
+};
+
+// ---------------------------------------------------------------------------
+// Unified drag-and-drop factory
+// ---------------------------------------------------------------------------
+// createDragSorter({ container, itemSelector, axis, ghostClass, markerClass,
+//   sortingClass, onReorder, excludeFromDrag, insertBeforeSelector })
+//
+// Returns { cleanup }
+
+const createDragSorter = (options) => {
+    const {
+        container,
+        itemSelector,
+        axis = "vertical",           // "vertical" | "horizontal"
+        ghostClass,
+        markerClass,
+        sortingClass = "is-sorting",
+        bodyClass = null,
+        onReorder,
+        excludeFromDrag = null,      // selector string to skip drag start
+        insertBeforeSelector = null,  // for horizontal: insert marker before this (e.g. add-button)
+    } = options;
+
+    let draggedItem = null;
+    let ghost = null;
+    let marker = null;
+    let offsetX = 0;
+    let offsetY = 0;
+
+    const getItems = () =>
+        Array.from(container.querySelectorAll(itemSelector)).filter((el) => el !== draggedItem);
+
+    const cleanup = () => {
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerup", onUp);
+        if (bodyClass) document.body.classList.remove(bodyClass);
+        if (ghost) { ghost.remove(); ghost = null; }
+        if (marker) { marker.remove(); marker = null; }
+        if (draggedItem) { draggedItem.classList.remove(sortingClass); draggedItem = null; }
+    };
+
+    const moveGhost = (event) => {
+        if (!ghost) return;
+        ghost.style.left = `${event.clientX - offsetX}px`;
+        ghost.style.top = `${event.clientY - offsetY}px`;
+    };
+
+    const placeMarker = (event) => {
+        const items = getItems();
+
+        if (!items.length) {
+            const anchor = insertBeforeSelector ? container.querySelector(insertBeforeSelector) : null;
+            anchor ? container.insertBefore(marker, anchor) : container.appendChild(marker);
+            return;
+        }
+
+        for (const item of items) {
+            const bounds = item.getBoundingClientRect();
+            const mid = axis === "horizontal"
+                ? bounds.left + bounds.width / 2
+                : bounds.top + bounds.height / 2;
+            const pos = axis === "horizontal" ? event.clientX : event.clientY;
+
+            if (pos < mid) {
+                container.insertBefore(marker, item);
+                return;
+            }
+        }
+
+        const anchor = insertBeforeSelector ? container.querySelector(insertBeforeSelector) : null;
+        anchor ? container.insertBefore(marker, anchor) : container.appendChild(marker);
+    };
+
+    function onMove(event) {
+        if (!draggedItem) return;
+        moveGhost(event);
+        placeMarker(event);
+    }
+
+    function onUp() {
+        if (!draggedItem) return;
+        const item = draggedItem;
+        if (marker && marker.parentNode) marker.replaceWith(item);
+        const ordered = Array.from(container.querySelectorAll(itemSelector));
+        cleanup();
+        onReorder(ordered);
+    }
+
+    const startDrag = (event, item) => {
+        if (event.button !== 0 || draggedItem) return;
+        if (excludeFromDrag && event.target.closest(excludeFromDrag)) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const bounds = item.getBoundingClientRect();
+        draggedItem = item;
+        offsetX = event.clientX - bounds.left;
+        offsetY = event.clientY - bounds.top;
+
+        ghost = item.cloneNode(true);
+        ghost.className = `${item.className} ${ghostClass}`;
+        ghost.style.width = `${bounds.width}px`;
+        if (axis === "vertical") ghost.style.height = `${bounds.height}px`;
+        ghost.style.left = `${bounds.left}px`;
+        ghost.style.top = `${bounds.top}px`;
+        ghost.style.position = "fixed";
+        ghost.style.margin = "0";
+        ghost.style.zIndex = "1000";
+        ghost.style.pointerEvents = "none";
+
+        marker = document.createElement("div");
+        marker.className = markerClass;
+
+        item.classList.add(sortingClass);
+        if (bodyClass) document.body.classList.add(bodyClass);
+        document.body.appendChild(ghost);
+        placeMarker(event);
+        moveGhost(event);
+
+        window.addEventListener("pointermove", onMove);
+        window.addEventListener("pointerup", onUp, { once: true });
+    };
+
+    return { startDrag, cleanup };
+};
+
+// ---------------------------------------------------------------------------
+// API helpers
+// ---------------------------------------------------------------------------
 
 const saveImage = async (id, payload) => {
     const response = await fetch(`/api/images/${id}`, {
         method: "PUT",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify(payload)
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
     });
-
-    if (!response.ok) {
-        throw new Error("Unable to save image.");
-    }
+    if (!response.ok) throw new Error("Unable to save image.");
 };
 
 const queueSave = (id, getPayload) => {
-    if (saveTimers.has(id)) {
-        clearTimeout(saveTimers.get(id));
-    }
+    if (saveTimers.has(id)) clearTimeout(saveTimers.get(id));
 
     const timer = window.setTimeout(async () => {
         saveTimers.delete(id);
-
         try {
             await saveImage(id, getPayload());
             setStatus("Changes saved.");
@@ -97,37 +222,162 @@ const queueSave = (id, getPayload) => {
 const reorderImages = async (ids) => {
     const response = await fetch("/api/images/reorder", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ ids })
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
     });
-
-    if (!response.ok) {
-        throw new Error("Unable to reorder images.");
-    }
+    if (!response.ok) throw new Error("Unable to reorder images.");
 };
 
 const deleteImage = async (id) => {
-    const response = await fetch(`/api/images/${id}`, {
-        method: "DELETE"
-    });
+    const response = await fetch(`/api/images/${id}`, { method: "DELETE" });
+    if (!response.ok) throw new Error("Unable to delete image.");
+};
 
-    if (!response.ok) {
-        throw new Error("Unable to delete image.");
+const getCurrentOrder = () =>
+    Array.from(dashboardList.querySelectorAll(".dashboard-row")).map((row) => row.dataset.id);
+
+// ---------------------------------------------------------------------------
+// Tag library API
+// ---------------------------------------------------------------------------
+
+const fetchTagLibrary = async () => {
+    try {
+        const response = await fetch("/api/tags");
+        if (response.ok) tagLibrary = await response.json();
+    } catch {
+        tagLibrary = [];
     }
 };
 
-const getCurrentOrder = () => Array.from(dashboardList.querySelectorAll(".dashboard-row")).map((row) => row.dataset.id);
+const apiAddTag = async (name) => {
+    const response = await fetch("/api/tags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+    });
+    if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "Unable to add tag.");
+    }
+    tagLibrary = await response.json();
+};
 
-const createTagChip = (tag, onRemove, removable = true) => {
+const apiDeleteTag = async (name) => {
+    const response = await fetch(`/api/tags/${encodeURIComponent(name)}`, { method: "DELETE" });
+    if (!response.ok) throw new Error("Unable to delete tag.");
+    tagLibrary = await response.json();
+};
+
+// ---------------------------------------------------------------------------
+// Tag library UI
+// ---------------------------------------------------------------------------
+
+const renderTagLibrary = () => {
+    tagLibraryListEl.innerHTML = "";
+
+    if (!tagLibrary.length) {
+        const hint = document.createElement("p");
+        hint.className = "field-hint";
+        hint.textContent = "No tags yet. Create some above.";
+        tagLibraryListEl.appendChild(hint);
+        return;
+    }
+
+    tagLibrary.forEach((tag) => {
+        const chip = document.createElement("span");
+        chip.className = "tag-chip";
+        chip.textContent = tag;
+
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "tag-chip-remove";
+        remove.textContent = "×";
+        remove.addEventListener("click", async () => {
+            try {
+                await apiDeleteTag(tag);
+                renderTagLibrary();
+                renderAllTagPickers();
+            } catch (error) {
+                setStatus(error.message, true);
+            }
+        });
+
+        chip.appendChild(remove);
+        tagLibraryListEl.appendChild(chip);
+    });
+};
+
+tagLibraryAddButton.addEventListener("click", async () => {
+    const name = tagLibraryInput.value.trim();
+    if (!name) return;
+
+    try {
+        await apiAddTag(name);
+        tagLibraryInput.value = "";
+        renderTagLibrary();
+        renderAllTagPickers();
+    } catch (error) {
+        setStatus(error.message, true);
+    }
+});
+
+tagLibraryInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+        event.preventDefault();
+        tagLibraryAddButton.click();
+    }
+});
+
+// ---------------------------------------------------------------------------
+// Tag picker (clickable library tags for quick assignment)
+// ---------------------------------------------------------------------------
+// Keeps a registry so we can re-render all pickers when the library changes.
+
+const tagPickerRegistry = [];
+
+const renderAllTagPickers = () => {
+    tagPickerRegistry.forEach((entry) => entry.render());
+};
+
+const createTagPicker = (container, getSelectedTags, onToggle) => {
+    const render = () => {
+        container.innerHTML = "";
+
+        if (!tagLibrary.length) return;
+
+        const selected = new Set(getSelectedTags().map((t) => t.toLowerCase()));
+
+        tagLibrary.forEach((tag) => {
+            const chip = document.createElement("button");
+            chip.type = "button";
+            chip.className = "tag-picker-chip" + (selected.has(tag.toLowerCase()) ? " is-selected" : "");
+            chip.textContent = tag;
+            chip.addEventListener("click", () => {
+                onToggle(tag);
+                render();
+            });
+            container.appendChild(chip);
+        });
+    };
+
+    const entry = { render };
+    tagPickerRegistry.push(entry);
+    render();
+
+    return { render, destroy: () => {
+        const idx = tagPickerRegistry.indexOf(entry);
+        if (idx !== -1) tagPickerRegistry.splice(idx, 1);
+    }};
+};
+
+// ---------------------------------------------------------------------------
+// Tag editor (inline typing + chips)
+// ---------------------------------------------------------------------------
+
+const createTagChip = (tag, onRemove) => {
     const chip = document.createElement("span");
     chip.className = "tag-chip";
     chip.textContent = tag;
-
-    if (!removable) {
-        return chip;
-    }
 
     const remove = document.createElement("button");
     remove.type = "button";
@@ -137,8 +387,8 @@ const createTagChip = (tag, onRemove, removable = true) => {
         event.stopPropagation();
         onRemove();
     });
-    chip.appendChild(remove);
 
+    chip.appendChild(remove);
     return chip;
 };
 
@@ -152,15 +402,15 @@ const createTagEditor = (initialTags, onChange) => {
     list.className = "tag-list tag-list-editor";
     input.className = "tag-input";
     input.type = "text";
+    input.placeholder = "Or type custom tags…";
 
     const emit = () => onChange(tags.slice());
 
     const render = () => {
         list.innerHTML = "";
-
         tags.forEach((tag) => {
             list.appendChild(createTagChip(tag, () => {
-                tags = tags.filter((value) => value !== tag);
+                tags = tags.filter((v) => v !== tag);
                 render();
                 emit();
             }));
@@ -169,37 +419,34 @@ const createTagEditor = (initialTags, onChange) => {
 
     const commitInput = () => {
         const parsed = input.value.split(",").map(normalizeTag).filter(Boolean);
-
-        if (!parsed.length) {
-            input.value = "";
-            return;
-        }
-
+        if (!parsed.length) { input.value = ""; return; }
         tags = uniqueTags([...tags, ...parsed]);
         input.value = "";
         render();
         emit();
     };
 
-    input.addEventListener("input", () => {
-        if (input.value.includes(",")) {
-            commitInput();
+    const addTag = (tag) => {
+        const key = tag.toLowerCase();
+        if (tags.some((t) => t.toLowerCase() === key)) {
+            // Remove if already present (toggle behavior)
+            tags = tags.filter((t) => t.toLowerCase() !== key);
+        } else {
+            tags = uniqueTags([...tags, tag]);
         }
-    });
+        render();
+        emit();
+    };
 
+    input.addEventListener("input", () => { if (input.value.includes(",")) commitInput(); });
     input.addEventListener("keydown", (event) => {
-        if (event.key === "Enter") {
-            event.preventDefault();
-            commitInput();
-        }
-
+        if (event.key === "Enter") { event.preventDefault(); commitInput(); }
         if (event.key === "Backspace" && !input.value && tags.length) {
             tags = tags.slice(0, -1);
             render();
             emit();
         }
     });
-
     input.addEventListener("blur", commitInput);
     editor.addEventListener("click", () => input.focus());
     editor.append(list, input);
@@ -208,157 +455,57 @@ const createTagEditor = (initialTags, onChange) => {
     return {
         element: editor,
         getTags: () => tags.slice(),
-        reset: () => {
-            tags = [];
-            input.value = "";
-            render();
-            emit();
-        }
+        addTag,
+        reset: () => { tags = []; input.value = ""; render(); emit(); },
     };
 };
+
+// ---------------------------------------------------------------------------
+// Gallery image sorter (within a dashboard row)
+// ---------------------------------------------------------------------------
 
 const createGallerySorter = (initialUrls, title, onChange) => {
     const list = document.createElement("div");
     let urls = initialUrls.slice();
-    let draggedItem = null;
-    let dragGhost = null;
-    let dropMarker = null;
-    let pointerX = 0;
-    let pointerY = 0;
-
     list.className = "dashboard-gallery-list";
-
-    const cleanup = () => {
-        window.removeEventListener("pointermove", handleMove);
-        window.removeEventListener("pointerup", handleUp);
-
-        if (dragGhost) {
-            dragGhost.remove();
-            dragGhost = null;
-        }
-
-        if (dropMarker) {
-            dropMarker.remove();
-            dropMarker = null;
-        }
-
-        if (draggedItem) {
-            draggedItem.classList.remove("is-sorting");
-            draggedItem = null;
-        }
-    };
-
-    const moveGhost = (event) => {
-        if (!dragGhost) {
-            return;
-        }
-
-        dragGhost.style.left = `${event.clientX - pointerX}px`;
-        dragGhost.style.top = `${event.clientY - pointerY}px`;
-    };
-
-    const placeMarker = (event) => {
-        const items = Array.from(list.querySelectorAll(".dashboard-gallery-item")).filter((item) => item !== draggedItem);
-
-        if (!items.length) {
-            list.appendChild(dropMarker);
-            return;
-        }
-
-        for (const item of items) {
-            const bounds = item.getBoundingClientRect();
-            const midpoint = bounds.top + bounds.height / 2;
-
-            if (event.clientY < midpoint) {
-                list.insertBefore(dropMarker, item);
-                return;
-            }
-        }
-
-        list.appendChild(dropMarker);
-    };
-
-    function handleMove(event) {
-        moveGhost(event);
-        placeMarker(event);
-    }
-
-    function handleUp() {
-        if (!draggedItem) {
-            return;
-        }
-
-        const item = draggedItem;
-
-        if (dropMarker && dropMarker.parentNode) {
-            dropMarker.replaceWith(item);
-        }
-
-        urls = Array.from(list.querySelectorAll(".dashboard-gallery-item")).map((entry) => entry.dataset.url);
-        cleanup();
-        render();
-        onChange(urls.slice());
-    }
-
-    const startDrag = (event) => {
-        if (event.button !== 0 || draggedItem) {
-            return;
-        }
-
-        event.preventDefault();
-        event.stopPropagation();
-
-        const item = event.currentTarget;
-        const bounds = item.getBoundingClientRect();
-
-        draggedItem = item;
-        pointerX = event.clientX - bounds.left;
-        pointerY = event.clientY - bounds.top;
-
-        dragGhost = item.cloneNode(true);
-        dragGhost.className = "dashboard-gallery-item dashboard-gallery-ghost";
-        dragGhost.style.width = `${bounds.width}px`;
-        dragGhost.style.height = `${bounds.height}px`;
-        dragGhost.style.left = `${bounds.left}px`;
-        dragGhost.style.top = `${bounds.top}px`;
-
-        dropMarker = document.createElement("div");
-        dropMarker.className = "dashboard-gallery-drop-marker";
-
-        item.classList.add("is-sorting");
-        document.body.appendChild(dragGhost);
-        placeMarker(event);
-        moveGhost(event);
-
-        window.addEventListener("pointermove", handleMove);
-        window.addEventListener("pointerup", handleUp, { once: true });
-    };
 
     const render = () => {
         list.innerHTML = "";
-
         urls.forEach((url) => {
             const item = document.createElement("div");
             const image = document.createElement("img");
-
             item.className = "dashboard-gallery-item";
             item.dataset.url = url;
             image.src = url;
             image.alt = title;
             image.draggable = false;
             item.appendChild(image);
-            item.addEventListener("pointerdown", startDrag);
+            item.addEventListener("pointerdown", (event) => sorter.startDrag(event, item));
             list.appendChild(item);
         });
     };
 
+    const sorter = createDragSorter({
+        container: list,
+        itemSelector: ".dashboard-gallery-item",
+        axis: "vertical",
+        ghostClass: "dashboard-gallery-ghost",
+        markerClass: "dashboard-gallery-drop-marker",
+        onReorder: (ordered) => {
+            urls = ordered.map((el) => el.dataset.url);
+            render();
+            onChange(urls.slice());
+        },
+    });
+
     render();
 
-    return {
-        element: list,
-        getUrls: () => urls.slice()
-    };
+    return { element: list, getUrls: () => urls.slice() };
 };
+
+// ---------------------------------------------------------------------------
+// Upload preview list with drag reorder
+// ---------------------------------------------------------------------------
 
 const renderUploadPreviews = () => {
     uploadPreviewList.innerHTML = "";
@@ -381,322 +528,98 @@ const renderUploadPreviews = () => {
             pendingUploads.splice(index, 1);
             renderUploadPreviews();
         });
-        item.addEventListener("pointerdown", startUploadDrag);
+
+        item.addEventListener("pointerdown", (event) => {
+            if (event.target.closest(".upload-preview-remove")) return;
+            uploadSorter.startDrag(event, item);
+        });
 
         item.append(image, remove);
-
         uploadPreviewList.appendChild(item);
     });
 
     const addButton = document.createElement("button");
     const plus = document.createElement("span");
-
     addButton.type = "button";
     addButton.className = "upload-preview-add";
     addButton.setAttribute("aria-label", "Add images");
-    addButton.addEventListener("click", () => {
-        uploadImageInput.click();
-    });
+    addButton.addEventListener("click", () => uploadImageInput.click());
     plus.textContent = "+";
     addButton.appendChild(plus);
     uploadPreviewList.appendChild(addButton);
 };
 
-const cleanupUploadDrag = () => {
-    window.removeEventListener("pointermove", handleUploadPointerMove);
-    window.removeEventListener("pointerup", handleUploadPointerUp);
-    document.body.classList.remove("upload-preview-sorting");
-
-    if (uploadDragGhost) {
-        uploadDragGhost.remove();
-        uploadDragGhost = null;
-    }
-
-    if (uploadDropMarker) {
-        uploadDropMarker.remove();
-        uploadDropMarker = null;
-    }
-
-    if (draggedUpload) {
-        draggedUpload.classList.remove("is-sorting");
-        draggedUpload = null;
-    }
-};
-
-const moveUploadGhost = (event) => {
-    if (!uploadDragGhost) {
-        return;
-    }
-
-    uploadDragGhost.style.left = `${event.clientX - uploadPointerOffsetX}px`;
-    uploadDragGhost.style.top = `${event.clientY - uploadPointerOffsetY}px`;
-};
-
-const placeUploadMarker = (event) => {
-    const items = Array.from(uploadPreviewList.querySelectorAll(".upload-preview-item")).filter((item) => item !== draggedUpload);
-
-    if (!items.length) {
-        uploadPreviewList.insertBefore(uploadDropMarker, uploadPreviewList.querySelector(".upload-preview-add"));
-        return;
-    }
-
-    for (const item of items) {
-        const bounds = item.getBoundingClientRect();
-        const midpoint = bounds.left + bounds.width / 2;
-
-        if (event.clientX < midpoint) {
-            uploadPreviewList.insertBefore(uploadDropMarker, item);
-            return;
-        }
-    }
-
-    uploadPreviewList.insertBefore(uploadDropMarker, uploadPreviewList.querySelector(".upload-preview-add"));
-};
-
-function handleUploadPointerMove(event) {
-    if (!draggedUpload) {
-        return;
-    }
-
-    moveUploadGhost(event);
-    placeUploadMarker(event);
-}
-
-function handleUploadPointerUp() {
-    if (!draggedUpload) {
-        return;
-    }
-
-    const item = draggedUpload;
-
-    if (uploadDropMarker && uploadDropMarker.parentNode) {
-        uploadDropMarker.replaceWith(item);
-    }
-
-    const nextOrder = Array.from(uploadPreviewList.querySelectorAll(".upload-preview-item")).map((preview) => {
-        const index = Number(preview.dataset.index);
-        return pendingUploads[index];
-    });
-
-    cleanupUploadDrag();
-    pendingUploads = nextOrder;
-    renderUploadPreviews();
-}
-
-const startUploadDrag = (event) => {
-    if (event.button !== 0 || draggedUpload || event.target.closest(".upload-preview-remove")) {
-        return;
-    }
-
-    event.preventDefault();
-
-    const item = event.currentTarget;
-    const bounds = item.getBoundingClientRect();
-
-    draggedUpload = item;
-    uploadPointerOffsetX = event.clientX - bounds.left;
-    uploadPointerOffsetY = event.clientY - bounds.top;
-
-    uploadDragGhost = item.cloneNode(true);
-    uploadDragGhost.className = "upload-preview-item upload-preview-ghost";
-    uploadDragGhost.style.width = `${bounds.width}px`;
-    uploadDragGhost.style.left = `${bounds.left}px`;
-    uploadDragGhost.style.top = `${bounds.top}px`;
-
-    uploadDropMarker = document.createElement("div");
-    uploadDropMarker.className = "upload-preview-drop-marker";
-
-    item.classList.add("is-sorting");
-    document.body.classList.add("upload-preview-sorting");
-    document.body.appendChild(uploadDragGhost);
-
-    placeUploadMarker(event);
-    moveUploadGhost(event);
-
-    window.addEventListener("pointermove", handleUploadPointerMove);
-    window.addEventListener("pointerup", handleUploadPointerUp, { once: true });
-};
+const uploadSorter = createDragSorter({
+    container: uploadPreviewList,
+    itemSelector: ".upload-preview-item",
+    axis: "horizontal",
+    ghostClass: "upload-preview-ghost",
+    markerClass: "upload-preview-drop-marker",
+    bodyClass: "upload-preview-sorting",
+    insertBeforeSelector: ".upload-preview-add",
+    onReorder: (ordered) => {
+        const nextOrder = ordered.map((el) => pendingUploads[Number(el.dataset.index)]);
+        pendingUploads = nextOrder;
+        renderUploadPreviews();
+    },
+});
 
 const clearPendingUploads = () => {
-    pendingUploads.forEach((entry) => {
-        URL.revokeObjectURL(entry.previewUrl);
-    });
+    pendingUploads.forEach((entry) => URL.revokeObjectURL(entry.previewUrl));
     pendingUploads = [];
     renderUploadPreviews();
 };
 
-const cleanupDrag = () => {
-    window.removeEventListener("pointermove", handlePointerMove);
-    window.removeEventListener("pointerup", handlePointerUp);
-    document.body.classList.remove("dashboard-dragging");
+// ---------------------------------------------------------------------------
+// Dashboard row drag reorder
+// ---------------------------------------------------------------------------
 
-    if (dragGhost) {
-        dragGhost.remove();
-        dragGhost = null;
-    }
-
-    if (dropLine) {
-        dropLine.remove();
-        dropLine = null;
-    }
-
-    if (draggedRow) {
-        draggedRow.classList.remove("is-sorting");
-        draggedRow = null;
-    }
-};
-
-const moveGhost = (event) => {
-    if (!dragGhost) {
-        return;
-    }
-
-    dragGhost.style.left = `${event.clientX - pointerOffsetX}px`;
-    dragGhost.style.top = `${event.clientY - pointerOffsetY}px`;
-};
-
-const placeDropLine = (event) => {
-    const rows = Array.from(dashboardList.querySelectorAll(".dashboard-row")).filter((row) => row !== draggedRow);
-
-    if (!rows.length) {
-        dashboardList.appendChild(dropLine);
-        return;
-    }
-
-    for (const row of rows) {
-        const bounds = row.getBoundingClientRect();
-        const midpoint = bounds.top + bounds.height / 2;
-
-        if (event.clientY < midpoint) {
-            dashboardList.insertBefore(dropLine, row);
-            return;
+const rowSorter = createDragSorter({
+    container: dashboardList,
+    itemSelector: ".dashboard-row",
+    axis: "vertical",
+    ghostClass: "dashboard-drag-ghost",
+    markerClass: "dashboard-drop-line",
+    bodyClass: "dashboard-dragging",
+    excludeFromDrag: ".dashboard-fields, .dashboard-remove, .dashboard-gallery-list",
+    onReorder: async (ordered) => {
+        const ids = ordered.map((el) => el.dataset.id);
+        try {
+            await reorderImages(ids);
+        } catch {
+            await loadDashboard();
         }
-    }
+    },
+});
 
-    dashboardList.appendChild(dropLine);
-};
-
-function handlePointerMove(event) {
-    if (!draggedRow) {
-        return;
-    }
-
-    moveGhost(event);
-    placeDropLine(event);
-}
-
-async function handlePointerUp() {
-    if (!draggedRow) {
-        return;
-    }
-
-    const row = draggedRow;
-    const previousOrder = startOrder.join(",");
-
-    if (dropLine && dropLine.parentNode) {
-        dropLine.replaceWith(row);
-    }
-
-    row.classList.remove("is-sorting");
-
-    const nextOrder = getCurrentOrder().join(",");
-    cleanupDrag();
-
-    if (previousOrder === nextOrder) {
-        return;
-    }
-
-    try {
-        await reorderImages(nextOrder.split(","));
-    } catch (error) {
-        await loadDashboard();
-    }
-};
-
-const startDrag = (event) => {
-    if (draggedRow) {
-        return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    const trigger = event.currentTarget;
-    const row = trigger.closest(".dashboard-row");
-    const bounds = row.getBoundingClientRect();
-
-    draggedRow = row;
-    startOrder = getCurrentOrder();
-    pointerOffsetX = event.clientX - bounds.left;
-    pointerOffsetY = event.clientY - bounds.top;
-
-    dragGhost = row.cloneNode(true);
-    dragGhost.className = "dashboard-row dashboard-drag-ghost";
-    dragGhost.style.width = `${bounds.width}px`;
-    dragGhost.style.left = `${bounds.left}px`;
-    dragGhost.style.top = `${bounds.top}px`;
-
-    dropLine = document.createElement("div");
-    dropLine.className = "dashboard-drop-line";
-
-    row.classList.add("is-sorting");
-    document.body.classList.add("dashboard-dragging");
-    document.body.appendChild(dragGhost);
-
-    placeDropLine(event);
-    moveGhost(event);
-
-    window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerup", handlePointerUp, { once: true });
-};
-
-const startDragFromRow = (event) => {
-    if (draggedRow || event.button !== 0) {
-        return;
-    }
-
-    const target = event.target;
-
-    if (target.closest(".dashboard-fields") || target.closest(".dashboard-remove") || target.closest(".dashboard-gallery-list")) {
-        return;
-    }
-
-    startDrag(event);
-};
+// ---------------------------------------------------------------------------
+// Dashboard row creation
+// ---------------------------------------------------------------------------
 
 const createRow = (item) => {
     const artwork = normalizeArtwork(item);
+
+    // Elements
     const row = document.createElement("article");
     const handle = document.createElement("button");
     const thumb = document.createElement("div");
     const fields = document.createElement("div");
-    const titleField = document.createElement("div");
-    const titleLabel = document.createElement("label");
-    const titleInput = document.createElement("input");
-    const tagsField = document.createElement("div");
-    const tagsLabel = document.createElement("label");
-    const tagsHint = document.createElement("p");
-    const descriptionField = document.createElement("div");
-    const descriptionLabel = document.createElement("label");
-    const descriptionInput = document.createElement("textarea");
     const deleteButton = document.createElement("button");
 
     row.className = "dashboard-row";
     row.dataset.id = artwork.id;
-    thumb.className = "dashboard-thumb";
-    fields.className = "dashboard-fields";
-    titleField.className = "field";
-    tagsField.className = "field";
-    descriptionField.className = "field";
     handle.className = "dashboard-handle";
     handle.type = "button";
     handle.setAttribute("aria-label", "Reorder image");
     handle.textContent = "≡";
+    thumb.className = "dashboard-thumb";
+    fields.className = "dashboard-fields";
     deleteButton.className = "dashboard-remove";
     deleteButton.type = "button";
     deleteButton.setAttribute("aria-label", "Remove image");
     deleteButton.textContent = "×";
 
+    // Thumbnail / gallery sorter
     let gallerySorter = null;
 
     if (artwork.image_urls.length > 1) {
@@ -704,46 +627,48 @@ const createRow = (item) => {
         gallerySorter = createGallerySorter(artwork.image_urls, artwork.title, scheduleSave);
         thumb.appendChild(gallerySorter.element);
     } else {
-        const thumbImage = document.createElement("img");
-        thumbImage.src = artwork.image_url;
-        thumbImage.alt = artwork.title;
-        thumbImage.draggable = false;
-        thumb.appendChild(thumbImage);
+        const img = document.createElement("img");
+        img.src = artwork.image_url;
+        img.alt = artwork.title;
+        img.draggable = false;
+        thumb.appendChild(img);
     }
 
-    titleLabel.textContent = "Title";
-    titleInput.value = artwork.title;
-    titleInput.name = `title-${artwork.id}`;
+    // Fields
+    const titleInput = createField("Title", "input", artwork.title);
+    const descriptionInput = createField("Description", "textarea", artwork.description || "");
 
-    tagsLabel.textContent = "Tags";
-    tagsHint.className = "field-hint";
-    tagsHint.textContent = "Comma separated.";
-
-    descriptionLabel.textContent = "Description";
-    descriptionInput.value = artwork.description || "";
-    descriptionInput.name = `description-${artwork.id}`;
-
+    // Tag editor + picker for this row
     const tagEditor = createTagEditor(artwork.tags || [], scheduleSave);
+    const tagPickerContainer = document.createElement("div");
+    tagPickerContainer.className = "tag-picker";
+    const picker = createTagPicker(tagPickerContainer, tagEditor.getTags, (tag) => {
+        tagEditor.addTag(tag);
+        picker.render();
+        scheduleSave();
+    });
+
+    const tagsField = document.createElement("div");
+    tagsField.className = "field";
+    const tagsLabel = document.createElement("label");
+    tagsLabel.textContent = "Tags";
+    tagsField.append(tagsLabel, tagPickerContainer, tagEditor.element);
 
     function scheduleSave() {
         queueSave(artwork.id, () => ({
             title: titleInput.value.trim(),
             description: descriptionInput.value.trim(),
             tags: tagEditor.getTags(),
-            image_urls: gallerySorter ? gallerySorter.getUrls() : artwork.image_urls
+            image_urls: gallerySorter ? gallerySorter.getUrls() : artwork.image_urls,
         }));
     }
 
     titleInput.addEventListener("input", scheduleSave);
     descriptionInput.addEventListener("input", scheduleSave);
 
+    // Delete
     deleteButton.addEventListener("click", async () => {
-        const confirmed = window.confirm(`Remove "${artwork.title}"?`);
-
-        if (!confirmed) {
-            return;
-        }
-
+        if (!window.confirm(`Remove "${artwork.title}"?`)) return;
         try {
             await deleteImage(artwork.id);
             setStatus("Image removed.");
@@ -752,22 +677,50 @@ const createRow = (item) => {
             setStatus(error.message, true);
         }
     });
+    deleteButton.addEventListener("pointerdown", (event) => event.stopPropagation());
 
-    deleteButton.addEventListener("pointerdown", (event) => {
-        event.stopPropagation();
+    // Drag
+    handle.addEventListener("pointerdown", (event) => rowSorter.startDrag(event, row));
+    row.addEventListener("pointerdown", (event) => {
+        if (event.button !== 0) return;
+        if (event.target.closest(".dashboard-fields, .dashboard-remove, .dashboard-gallery-list")) return;
+        rowSorter.startDrag(event, row);
     });
 
-    handle.addEventListener("pointerdown", startDrag);
-    row.addEventListener("pointerdown", startDragFromRow);
-
-    titleField.append(titleLabel, titleInput);
-    tagsField.append(tagsLabel, tagEditor.element, tagsHint);
-    descriptionField.append(descriptionLabel, descriptionInput);
-    fields.append(titleField, tagsField, descriptionField);
+    // Assemble
+    const titleField = wrapField("Title", titleInput);
+    const descField = wrapField("Description", descriptionInput);
+    fields.append(titleField, tagsField, descField);
     row.append(handle, thumb, fields, deleteButton);
 
     return row;
 };
+
+// Field helpers
+const createField = (label, type, value) => {
+    if (type === "textarea") {
+        const el = document.createElement("textarea");
+        el.value = value;
+        return el;
+    }
+    const el = document.createElement("input");
+    el.type = "text";
+    el.value = value;
+    return el;
+};
+
+const wrapField = (labelText, inputEl) => {
+    const field = document.createElement("div");
+    field.className = "field";
+    const label = document.createElement("label");
+    label.textContent = labelText;
+    field.append(label, inputEl);
+    return field;
+};
+
+// ---------------------------------------------------------------------------
+// Dashboard render / load
+// ---------------------------------------------------------------------------
 
 const renderDashboard = (items) => {
     dashboardList.innerHTML = "";
@@ -780,9 +733,7 @@ const renderDashboard = (items) => {
         return;
     }
 
-    items.forEach((item) => {
-        dashboardList.appendChild(createRow(item));
-    });
+    items.forEach((item) => dashboardList.appendChild(createRow(item)));
 };
 
 const loadDashboard = async () => {
@@ -791,22 +742,29 @@ const loadDashboard = async () => {
     renderDashboard(items);
 };
 
+// ---------------------------------------------------------------------------
+// Upload form: tag editor + picker
+// ---------------------------------------------------------------------------
+
 const uploadTagEditor = createTagEditor([], (tags) => {
     uploadTagsField.value = JSON.stringify(tags);
 });
 uploadTagsEditorRoot.replaceWith(uploadTagEditor.element);
 uploadTagsField.value = "[]";
 
+createTagPicker(uploadTagPickerRoot, uploadTagEditor.getTags, (tag) => {
+    uploadTagEditor.addTag(tag);
+    uploadTagsField.value = JSON.stringify(uploadTagEditor.getTags());
+});
+
+// ---------------------------------------------------------------------------
+// Upload form: file selection + submit
+// ---------------------------------------------------------------------------
+
 uploadImageInput.addEventListener("change", () => {
-    const files = Array.from(uploadImageInput.files || []);
-
-    files.forEach((file) => {
-        pendingUploads.push({
-            file,
-            previewUrl: URL.createObjectURL(file)
-        });
+    Array.from(uploadImageInput.files || []).forEach((file) => {
+        pendingUploads.push({ file, previewUrl: URL.createObjectURL(file) });
     });
-
     uploadImageInput.value = "";
     renderUploadPreviews();
 });
@@ -823,20 +781,11 @@ uploadForm.addEventListener("submit", async (event) => {
     formData.append("title", uploadForm.elements.title.value);
     formData.append("description", uploadForm.elements.description.value);
     formData.append("tags", uploadTagsField.value);
-    pendingUploads.forEach((entry) => {
-        formData.append("image", entry.file);
-    });
+    pendingUploads.forEach((entry) => formData.append("image", entry.file));
 
     try {
-        const response = await fetch("/api/images", {
-            method: "POST",
-            body: formData
-        });
-
-        if (!response.ok) {
-            throw new Error("Unable to upload image.");
-        }
-
+        const response = await fetch("/api/images", { method: "POST", body: formData });
+        if (!response.ok) throw new Error("Unable to upload image.");
         uploadForm.reset();
         uploadTagEditor.reset();
         clearPendingUploads();
@@ -847,5 +796,15 @@ uploadForm.addEventListener("submit", async (event) => {
     }
 });
 
-renderUploadPreviews();
-loadDashboard();
+// ---------------------------------------------------------------------------
+// Boot
+// ---------------------------------------------------------------------------
+
+const boot = async () => {
+    await fetchTagLibrary();
+    renderTagLibrary();
+    renderUploadPreviews();
+    await loadDashboard();
+};
+
+boot();
