@@ -17,7 +17,17 @@
         </nav>
     </header>
     <main class="page dashboard">
+        <section class="tag-library" id="tagLibrary">
+            <h2 class="section-heading">Tag Library</h2>
+            <div class="tag-library-controls">
+                <input id="tagLibraryInput" class="tag-library-input" type="text" placeholder="New tag name&hellip;">
+                <button class="button" id="tagLibraryAdd" type="button">Add Tag</button>
+            </div>
+            <div class="tag-library-list" id="tagLibraryList"></div>
+        </section>
+
         <section>
+            <h2 class="section-heading">Upload</h2>
             <form class="upload-form" id="uploadForm" enctype="multipart/form-data">
                 <div class="field">
                     <label for="uploadTitle">Title</label>
@@ -28,12 +38,12 @@
                     <textarea id="uploadDescription" name="description"></textarea>
                 </div>
                 <div class="field">
-                    <label for="uploadTagsInput">Tags</label>
+                    <label>Tags</label>
+                    <div class="tag-picker" id="uploadTagPicker"></div>
                     <div class="tag-editor" id="uploadTagsEditor">
                         <div class="tag-list tag-list-editor"></div>
-                        <input id="uploadTagsInput" class="tag-input" type="text">
+                        <input id="uploadTagsInput" class="tag-input" type="text" placeholder="Or type custom tags&hellip;">
                     </div>
-                    <p class="field-hint">Comma separated.</p>
                     <input id="uploadTags" name="tags" type="hidden">
                 </div>
                 <div class="field">
@@ -50,7 +60,7 @@
         <section class="dashboard-list" id="dashboardList"></section>
     </main>
     <footer class="site-footer">
-        <p>© 2026 Anis Xeno</p>
+        <p>&copy; 2026 Anis Xeno</p>
     </footer>
     <script src="js/dashboard.js"></script>
 </body>

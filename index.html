@@ -17,13 +17,18 @@
         </nav>
     </header>
     <main class="page">
+        <div class="tag-filter-bar" id="tagFilterBar"></div>
         <section class="gallery" id="gallery"></section>
     </main>
     <footer class="site-footer">
-        <p>© 2026 Anis Xeno</p>
+        <p>&copy; 2026 Anis Xeno</p>
     </footer>
+
     <div class="viewer" id="viewer" aria-hidden="true">
-        <button class="viewer-close" id="viewerClose" aria-label="Close">×</button>
+        <div class="viewer-backdrop" id="viewerBackdrop"></div>
+        <button class="viewer-close" id="viewerClose" aria-label="Close">&times;</button>
+        <button class="viewer-nav viewer-nav-prev" id="viewerPrev" aria-label="Previous artwork">&lsaquo;</button>
+        <button class="viewer-nav viewer-nav-next" id="viewerNext" aria-label="Next artwork">&rsaquo;</button>
         <div class="viewer-content">
             <aside class="viewer-info">
                 <h1 id="viewerTitle">Untitled</h1>
@@ -35,6 +40,7 @@
             </div>
         </div>
     </div>
+
     <script src="js/main.js"></script>
 </body>
 </html>
