@@ -779,7 +779,8 @@ textarea {
     .viewer-content {
         grid-template-columns: 1fr;
         align-items: start;
-        padding-top: 5rem;
+        padding: 3rem 1.5rem 1rem;
+        gap: 0.8rem;
     }
 
     .upload-form {
@@ -815,30 +816,38 @@ textarea {
 
     /* Viewer mobile adjustments */
     .viewer-content {
-        gap: 1rem;
-        padding: 3.5rem 1rem 1rem;
+        gap: 0.5rem;
+        padding: 2.8rem 0.8rem 0.8rem;
+    }
+
+    .viewer-info {
+        padding: 0 0.2rem;
+    }
+
+    .viewer-info .tag-list {
+        margin-bottom: 0.3rem;
     }
 
     .viewer-info h1 {
-        font-size: 1.6rem;
-        margin-bottom: 0.5rem;
+        font-size: 1.35rem;
+        margin-bottom: 0.3rem;
     }
 
     .viewer-info p {
-        font-size: 1.05rem;
+        font-size: 0.95rem;
     }
 
     .viewer-close {
-        top: 0.8rem;
-        right: 1rem;
+        top: 0.5rem;
+        right: 0.8rem;
     }
 
     .viewer-images {
-        max-height: 70vh;
+        max-height: none;
     }
 
     .viewer-image-item img {
-        max-height: 70vh;
+        max-height: 80vh;
     }
 
     .dashboard-row {
@@ -883,11 +892,16 @@ textarea {
 
     /* Even smaller viewer info on small phones */
     .viewer-info h1 {
-        font-size: 1.3rem;
+        font-size: 1.15rem;
+        margin-bottom: 0.2rem;
     }
 
     .viewer-info p {
-        font-size: 0.95rem;
+        font-size: 0.88rem;
+    }
+
+    .viewer-content {
+        padding: 2.5rem 0.6rem 0.6rem;
     }
 
     .dashboard-actions {
