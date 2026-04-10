@@ -339,7 +339,7 @@ class AppHandler(BaseHTTPRequestHandler):
         if len(image_paths) > 1:
             item["image_paths"] = image_paths
 
-        images.append(item)
+        images.insert(0, item)
         save_images(images)
         self.send_json(image_payload(item), status=HTTPStatus.CREATED)
 
