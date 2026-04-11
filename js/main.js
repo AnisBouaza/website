@@ -19,6 +19,8 @@ const normalizeArtwork = (artwork) => {
     };
 };
 
+const isMobile = () => window.innerWidth <= 800;
+
 // ---------------------------------------------------------------------------
 // DOM refs
 // ---------------------------------------------------------------------------
@@ -45,12 +47,54 @@ let touchStartX = 0;
 let touchStartY = 0;
 let touchStartTime = 0;
 let isSwiping = false;
+let touchDirectionLocked = false;
 
 // Pinch-zoom state (mobile)
 let pinchStartDist = 0;
 let pinchScale = 1;
 let isPinching = false;
 let pinchTarget = null;
+
+// ---------------------------------------------------------------------------
+// Fade-in animation
+// ---------------------------------------------------------------------------
+// Two-phase: items in the initial viewport get a staggered delay on first
+// paint. Items below the fold use IntersectionObserver for scroll-triggered
+// fade-in.
+
+let revealBatch = 0;
+
+const fadeObserver = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+            const el = entry.target;
+            fadeObserver.unobserve(el);
+            // Small delay so the transition is visible even if observed immediately
+            requestAnimationFrame(() => {
+                el.classList.add("is-visible");
+            });
+        }
+    });
+}, { threshold: 0.05, rootMargin: "0px 0px 80px 0px" });
+
+const observeWithStagger = (item, index) => {
+    // For the initial batch, stagger the reveal so items cascade in
+    // requestAnimationFrame ensures the browser has painted opacity:0 first
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            const delay = index * 60; // 60ms between each item
+            item.style.transitionDelay = `${delay}ms`;
+            fadeObserver.observe(item);
+
+            // Remove the delay after the animation so it doesn't affect hover etc.
+            const cleanup = () => {
+                item.style.transitionDelay = "";
+                item.removeEventListener("transitionend", cleanup);
+            };
+            item.addEventListener("transitionend", cleanup);
+        });
+    });
+};
 
 // ---------------------------------------------------------------------------
 // Tags display
@@ -111,7 +155,6 @@ const toggleZoom = (image, event) => {
     zoomedImage = image;
 };
 
-// Pinch helpers
 const getPinchDist = (touches) => {
     const dx = touches[0].clientX - touches[1].clientX;
     const dy = touches[0].clientY - touches[1].clientY;
@@ -136,10 +179,10 @@ const createViewerImage = (src, alt) => {
     image.alt = alt;
     image.draggable = false;
 
-    // Desktop click-to-zoom
+    // Desktop click-to-zoom only
     image.addEventListener("click", (event) => {
         event.stopPropagation();
-        toggleZoom(image, event);
+        if (!isMobile()) toggleZoom(image, event);
     });
 
     // Desktop hover-pan while zoomed
@@ -149,7 +192,7 @@ const createViewerImage = (src, alt) => {
         }
     });
 
-    // Mobile pinch-to-zoom — only intercepts 2-finger gestures
+    // Mobile pinch-to-zoom
     image.addEventListener("touchstart", (event) => {
         if (event.touches.length === 2) {
             isPinching = true;
@@ -176,15 +219,13 @@ const createViewerImage = (src, alt) => {
         }
     }, { passive: false });
 
-    image.addEventListener("touchend", (event) => {
+    image.addEventListener("touchend", () => {
         if (isPinching) {
             isPinching = false;
             pinchTarget = null;
-
             if (pinchScale <= 1.2) {
                 resetZoom();
             } else {
-                // Snap to standard zoom level
                 image.style.transform = "";
                 pinchScale = 1;
             }
@@ -196,7 +237,7 @@ const createViewerImage = (src, alt) => {
 };
 
 // ---------------------------------------------------------------------------
-// Viewer navigation (prev / next across all gallery artworks)
+// Viewer navigation
 // ---------------------------------------------------------------------------
 
 const showArtwork = (artwork) => {
@@ -210,6 +251,8 @@ const showArtwork = (artwork) => {
         viewerImages.appendChild(createViewerImage(url, artwork.title));
     });
 
+    // On mobile the whole viewer scrolls; on desktop the images container scrolls
+    viewer.scrollTop = 0;
     viewerImages.scrollTop = 0;
 };
 
@@ -238,18 +281,34 @@ const navigateViewer = (direction) => {
 };
 
 // ---------------------------------------------------------------------------
+// Thumbnail helper
+// ---------------------------------------------------------------------------
+
+const thumbUrl = (url) => url.replace("/uploads/", "/uploads/thumbs/");
+
+// ---------------------------------------------------------------------------
 // Gallery rendering
 // ---------------------------------------------------------------------------
 
-const createGalleryItem = (artwork) => {
+const createGalleryItem = (artwork, index) => {
     const item = document.createElement("button");
     const image = document.createElement("img");
 
     item.className = "gallery-item";
     item.type = "button";
-    image.src = artwork.image_url;
+
+    // Use thumbnail for gallery grid, fall back to original
+    image.src = thumbUrl(artwork.image_url);
     image.alt = artwork.title;
     image.draggable = false;
+    image.loading = "lazy";
+
+    image.addEventListener("error", () => {
+        if (image.src !== artwork.image_url) {
+            image.src = artwork.image_url;
+        }
+    });
+
     item.appendChild(image);
 
     if (artwork.image_urls.length > 1) {
@@ -260,6 +319,10 @@ const createGalleryItem = (artwork) => {
     }
 
     item.addEventListener("click", () => openViewer(artwork));
+
+    // Staggered fade-in
+    observeWithStagger(item, index);
+
     return item;
 };
 
@@ -274,8 +337,8 @@ const renderGallery = (artworks) => {
         return;
     }
 
-    artworks.forEach((artwork) => {
-        gallery.appendChild(createGalleryItem(artwork));
+    artworks.forEach((artwork, index) => {
+        gallery.appendChild(createGalleryItem(artwork, index));
     });
 };
 
@@ -286,7 +349,6 @@ const renderGallery = (artworks) => {
 const loadGallery = async () => {
     try {
         const response = await fetch("data/images.json");
-
         if (!response.ok) {
             allArtworks = [];
         } else {
@@ -296,7 +358,6 @@ const loadGallery = async () => {
         allArtworks = [];
     }
 
-    allArtworks = allArtworks.slice();
     renderGallery(allArtworks);
 };
 
@@ -304,15 +365,10 @@ const loadGallery = async () => {
 // Event listeners
 // ---------------------------------------------------------------------------
 
-// Close viewer
 viewerClose.addEventListener("click", closeViewer);
-
-// Click outside image to close (backdrop)
 viewerBackdrop.addEventListener("click", closeViewer);
 
-// Click on viewer content area but NOT on image/info → close
 viewer.addEventListener("click", (event) => {
-    // Only close if clicking directly on the viewer overlay or viewer-content background
     const target = event.target;
     if (
         target === viewer ||
@@ -327,45 +383,25 @@ viewer.addEventListener("click", (event) => {
     }
 });
 
-// Reset zoom on scroll
-viewerImages.addEventListener("scroll", () => {
-    if (zoomedImage) resetZoom();
-});
+// Reset zoom on any scroll
+viewerImages.addEventListener("scroll", () => { if (zoomedImage) resetZoom(); });
+viewer.addEventListener("scroll", () => { if (zoomedImage) resetZoom(); });
 
-// Keyboard: Escape, ArrowLeft, ArrowRight
+// Keyboard
 document.addEventListener("keydown", (event) => {
     if (!viewer.classList.contains("is-open")) return;
 
     if (event.key === "Escape") {
-        if (zoomedImage) {
-            resetZoom();
-        } else {
-            closeViewer();
-        }
+        zoomedImage ? resetZoom() : closeViewer();
         return;
     }
-
-    if (event.key === "ArrowLeft") {
-        event.preventDefault();
-        navigateViewer(-1);
-        return;
-    }
-
-    if (event.key === "ArrowRight") {
-        event.preventDefault();
-        navigateViewer(1);
-        return;
-    }
+    if (event.key === "ArrowLeft") { event.preventDefault(); navigateViewer(-1); }
+    if (event.key === "ArrowRight") { event.preventDefault(); navigateViewer(1); }
 });
 
-// Swipe navigation (mobile) — on the entire viewer
-// Uses direction locking: once vertical scroll is detected, swipe is disabled for that gesture
-let touchDirectionLocked = false;
-
+// Swipe navigation (mobile) with direction locking
 viewer.addEventListener("touchstart", (event) => {
-    if (event.touches.length !== 1) return;
-    if (zoomedImage) return;
-
+    if (event.touches.length !== 1 || zoomedImage) return;
     touchStartX = event.touches[0].clientX;
     touchStartY = event.touches[0].clientY;
     touchStartTime = Date.now();
@@ -374,42 +410,32 @@ viewer.addEventListener("touchstart", (event) => {
 }, { passive: true });
 
 viewer.addEventListener("touchmove", (event) => {
-    if (event.touches.length !== 1) return;
-    if (zoomedImage) return;
-    if (touchDirectionLocked) return;
+    if (event.touches.length !== 1 || zoomedImage || touchDirectionLocked) return;
 
     const dx = event.touches[0].clientX - touchStartX;
     const dy = event.touches[0].clientY - touchStartY;
     const absDx = Math.abs(dx);
     const absDy = Math.abs(dy);
 
-    // Wait until there's enough movement to determine direction
     if (absDx < 10 && absDy < 10) return;
 
-    // Lock direction: if vertical wins, disable swipe for this gesture
     if (absDy > absDx) {
         touchDirectionLocked = true;
         isSwiping = false;
         return;
     }
 
-    // Horizontal clearly dominates — flag as swipe
     if (absDx > 30 && absDx > absDy * 2) {
         isSwiping = true;
     }
 }, { passive: true });
 
 viewer.addEventListener("touchend", (event) => {
-    if (!isSwiping) return;
-    if (zoomedImage) return;
-
+    if (!isSwiping || zoomedImage) return;
     const dx = event.changedTouches[0].clientX - touchStartX;
-    const elapsed = Date.now() - touchStartTime;
-
-    if (Math.abs(dx) > 60 && elapsed < 400) {
+    if (Math.abs(dx) > 60 && (Date.now() - touchStartTime) < 400) {
         navigateViewer(dx > 0 ? -1 : 1);
     }
-
     isSwiping = false;
 }, { passive: true });
 

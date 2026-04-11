@@ -19,9 +19,11 @@ from urllib.parse import urlparse
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 UPLOAD_DIR = BASE_DIR / "uploads"
+THUMB_DIR = UPLOAD_DIR / "thumbs"
 DATA_FILE = DATA_DIR / "images.json"
 TAGS_FILE = DATA_DIR / "tags.json"
 WATCHED_SUFFIXES = {".py", ".html", ".css", ".js", ".json"}
+THUMB_MAX_SIZE = 600
 
 
 # ---------------------------------------------------------------------------
@@ -31,6 +33,7 @@ WATCHED_SUFFIXES = {".py", ".html", ".css", ".js", ".json"}
 def ensure_storage():
     DATA_DIR.mkdir(exist_ok=True)
     UPLOAD_DIR.mkdir(exist_ok=True)
+    THUMB_DIR.mkdir(exist_ok=True)
 
     if not TAGS_FILE.exists():
         write_json(TAGS_FILE, [])
@@ -65,6 +68,49 @@ def write_json(path, data):
 def read_json(path):
     with path.open("r", encoding="utf-8") as handle:
         return json.load(handle)
+
+
+def generate_thumbnail(source_path):
+    """Generate a thumbnail for an image file. Returns True on success."""
+    try:
+        from PIL import Image
+
+        thumb_path = THUMB_DIR / source_path.name
+
+        if thumb_path.exists():
+            return True
+
+        with Image.open(source_path) as img:
+            img.thumbnail((THUMB_MAX_SIZE, THUMB_MAX_SIZE), Image.LANCZOS)
+
+            # Handle transparency for formats that don't support it
+            if source_path.suffix.lower() in {".jpg", ".jpeg"}:
+                if img.mode in ("RGBA", "P"):
+                    img = img.convert("RGB")
+                img.save(thumb_path, "JPEG", quality=82)
+            elif source_path.suffix.lower() == ".png":
+                img.save(thumb_path, "PNG", optimize=True)
+            elif source_path.suffix.lower() == ".webp":
+                img.save(thumb_path, "WEBP", quality=82)
+            else:
+                # For SVG and other formats, skip thumbnail
+                return False
+
+        return True
+    except Exception:
+        return False
+
+
+def generate_all_thumbnails():
+    """Generate thumbnails for all existing uploads that lack one."""
+    if not UPLOAD_DIR.exists():
+        return
+
+    for path in UPLOAD_DIR.iterdir():
+        if not path.is_file():
+            continue
+        if path.suffix.lower() in {".jpg", ".jpeg", ".png", ".webp"}:
+            generate_thumbnail(path)
 
 
 def build_sample_svg(index):
@@ -326,6 +372,7 @@ class AppHandler(BaseHTTPRequestHandler):
             filename = f"{uuid.uuid4().hex}-{stem}{ext}"
             target = UPLOAD_DIR / filename
             target.write_bytes(upload["content"])
+            generate_thumbnail(target)
             image_paths.append(f"/uploads/{filename}")
 
         images = load_images()
@@ -521,6 +568,7 @@ class AppHandler(BaseHTTPRequestHandler):
 
 def run():
     ensure_storage()
+    generate_all_thumbnails()
     port = int(os.environ.get("PORT", "8000"))
     server = ThreadingHTTPServer(("0.0.0.0", port), AppHandler)
     print(f"Serving on http://127.0.0.1:{port}")

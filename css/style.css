@@ -146,6 +146,27 @@ textarea {
     filter: brightness(0.65);
 }
 
+/* Fade-in animation */
+
+.gallery-item {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.gallery-item img {
+    visibility: hidden;
+}
+
+.gallery-item.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.gallery-item.is-visible img {
+    visibility: visible;
+}
+
 /* -------------------------------------------------------------------
    Viewer (lightbox)
    ------------------------------------------------------------------- */
@@ -168,7 +189,7 @@ textarea {
 }
 
 .viewer-close {
-    position: absolute;
+    position: fixed;
     top: 1.5rem;
     right: 2rem;
     border: 0;
@@ -783,6 +804,7 @@ textarea {
         align-items: start;
         padding: 3rem 1.5rem 1rem;
         gap: 0.8rem;
+        min-height: auto;
     }
 
     .upload-form {
@@ -816,10 +838,20 @@ textarea {
         gap: 0.8rem;
     }
 
-    /* Viewer mobile adjustments */
+    /* Viewer mobile — entire viewer scrolls, images fill width */
+    .viewer {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .viewer-backdrop {
+        position: fixed;
+    }
+
     .viewer-content {
-        gap: 0.5rem;
-        padding: 2.8rem 0.8rem 0.8rem;
+        gap: 0.4rem;
+        padding: 2.8rem 0.6rem 1.5rem;
+        min-height: auto;
     }
 
     .viewer-info {
@@ -831,12 +863,12 @@ textarea {
     }
 
     .viewer-info h1 {
-        font-size: 1.35rem;
-        margin-bottom: 0.3rem;
+        font-size: 1.25rem;
+        margin-bottom: 0.2rem;
     }
 
     .viewer-info p {
-        font-size: 0.95rem;
+        font-size: 0.92rem;
     }
 
     .viewer-close {
@@ -846,10 +878,15 @@ textarea {
 
     .viewer-images {
         max-height: none;
+        overflow-y: visible;
+        padding-right: 0;
+        gap: 0.8rem;
     }
 
     .viewer-image-item img {
-        max-height: 80vh;
+        max-height: none;
+        max-width: 100%;
+        width: 100%;
     }
 
     .dashboard-row {
@@ -894,16 +931,16 @@ textarea {
 
     /* Even smaller viewer info on small phones */
     .viewer-info h1 {
-        font-size: 1.15rem;
-        margin-bottom: 0.2rem;
+        font-size: 1.1rem;
+        margin-bottom: 0.15rem;
     }
 
     .viewer-info p {
-        font-size: 0.88rem;
+        font-size: 0.85rem;
     }
 
     .viewer-content {
-        padding: 2.5rem 0.6rem 0.6rem;
+        padding: 2.5rem 0.4rem 1rem;
     }
 
     .dashboard-actions {
