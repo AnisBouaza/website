@@ -125,6 +125,9 @@ const renderTags = (container, tags) => {
 const resetZoom = () => {
     if (!zoomedImage) return;
     const image = zoomedImage;
+
+    // Ensure CSS transition is active for smooth snap-back
+    image.style.transition = "";
     image.classList.remove("is-zoomed");
     image.style.transform = "";
     zoomedImage = null;
@@ -132,7 +135,7 @@ const resetZoom = () => {
 
     window.setTimeout(() => {
         image.style.transformOrigin = "center center";
-    }, 180);
+    }, 320);
 };
 
 const getZoomOrigin = (image, clientX, clientY) => {
@@ -192,14 +195,23 @@ const createViewerImage = (src, alt) => {
         }
     });
 
-    // Mobile pinch-to-zoom
+    // Mobile pinch-to-zoom — smooth with transition control
     image.addEventListener("touchstart", (event) => {
         if (event.touches.length === 2) {
             isPinching = true;
             pinchTarget = image;
             pinchStartDist = getPinchDist(event.touches);
+
+            // Disable CSS transition during active pinch for responsive feel
+            image.style.transition = "none";
+
             const center = getPinchCenter(event.touches);
             image.style.transformOrigin = getZoomOrigin(image, center.x, center.y);
+
+            // If already zoomed, start from current scale
+            if (zoomedImage !== image) {
+                pinchScale = 1;
+            }
         }
     }, { passive: true });
 
@@ -207,11 +219,15 @@ const createViewerImage = (src, alt) => {
         if (isPinching && event.touches.length === 2 && pinchTarget === image) {
             event.preventDefault();
             const dist = getPinchDist(event.touches);
-            pinchScale = Math.max(1, Math.min(4, dist / pinchStartDist * (zoomedImage === image ? 2.2 : 1)));
+            const rawScale = dist / pinchStartDist;
 
-            if (pinchScale > 1.2) {
+            // Smooth scale from current base
+            pinchScale = Math.max(1, Math.min(5, rawScale * (zoomedImage === image ? 2.2 : 1)));
+
+            image.style.transform = `scale(${pinchScale})`;
+
+            if (pinchScale > 1.05) {
                 image.classList.add("is-zoomed");
-                image.style.transform = `scale(${pinchScale})`;
                 zoomedImage = image;
                 const center = getPinchCenter(event.touches);
                 image.style.transformOrigin = getZoomOrigin(image, center.x, center.y);
@@ -223,9 +239,15 @@ const createViewerImage = (src, alt) => {
         if (isPinching) {
             isPinching = false;
             pinchTarget = null;
-            if (pinchScale <= 1.2) {
+
+            // Re-enable smooth transition for snap-back
+            image.style.transition = "";
+
+            if (pinchScale <= 1.3) {
+                // Snap back to normal smoothly
                 resetZoom();
             } else {
+                // Snap to standard 2.2x zoom level smoothly
                 image.style.transform = "";
                 pinchScale = 1;
             }

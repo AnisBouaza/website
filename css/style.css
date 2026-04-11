@@ -256,7 +256,7 @@ textarea {
     display: block;
     cursor: zoom-in;
     transform-origin: center center;
-    transition: transform 0.18s ease;
+    transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
     touch-action: pan-y;
 }
 
@@ -849,13 +849,13 @@ textarea {
     }
 
     .viewer-content {
-        gap: 0.4rem;
-        padding: 2.8rem 0.6rem 1.5rem;
+        gap: 0.6rem;
+        padding: 2.8rem 0.4rem 1.5rem;
         min-height: auto;
     }
 
     .viewer-info {
-        padding: 0 0.2rem;
+        padding: 0 0.4rem;
     }
 
     .viewer-info .tag-list {
@@ -883,10 +883,17 @@ textarea {
         gap: 0.8rem;
     }
 
+    .viewer-image-item {
+        justify-content: center;
+        align-items: center;
+    }
+
     .viewer-image-item img {
-        max-height: none;
         max-width: 100%;
-        width: 100%;
+        max-height: 85vh;
+        width: auto;
+        height: auto;
+        object-fit: contain;
     }
 
     .dashboard-row {
