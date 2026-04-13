@@ -1,5 +1,22 @@
 [
     {
+        "id": "bf092a3c-158b-45ab-9d45-014758aa2d71",
+        "title": "JJK Drawings",
+        "description": "Some drawings from JJK manga",
+        "tags": [
+            "Manga",
+            "Fanart"
+        ],
+        "image_path": "/uploads/cdf564dd1bf642c4b82934abdeda7901-ishigori.jpg",
+        "image_paths": [
+            "/uploads/cdf564dd1bf642c4b82934abdeda7901-ishigori.jpg",
+            "/uploads/6b611ce297e34d60bcd94e1485ac645f-yuji.jpg",
+            "/uploads/f1cdad51dd5d47898b0ea829bc983951-yuta.jpg",
+            "/uploads/b749af8049e44f76adf6b32730b742ba-mahito.jpg",
+            "/uploads/0863673d2d5e4ac5a8d0319e856980ae-JJK_500waydomain--Final_montage.jpg"
+        ]
+    },
+    {
         "id": "6ce6d657-fa9e-463d-ad42-bafa9b613ad5",
         "title": "Medivh",
         "description": "",
