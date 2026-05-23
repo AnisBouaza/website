@@ -42,13 +42,6 @@ let allArtworks = [];
 let currentIndex = -1;
 let zoomedImage = null;
 
-// Touch / swipe state
-let touchStartX = 0;
-let touchStartY = 0;
-let touchStartTime = 0;
-let isSwiping = false;
-let touchDirectionLocked = false;
-
 // ---------------------------------------------------------------------------
 // Fade-in animation
 // ---------------------------------------------------------------------------
@@ -184,6 +177,12 @@ const createViewerImage = (src, alt) => {
 // ---------------------------------------------------------------------------
 // Viewer navigation
 // ---------------------------------------------------------------------------
+// The URL hash (#<id>) is the single source of truth for which artwork is
+// open. openViewer/closeViewer update the hash; a hashchange listener reacts
+// to the hash and actually opens/closes the viewer. This makes the browser
+// back button close the viewer naturally and makes every artwork shareable.
+
+let isHandlingHashChange = false;
 
 const showArtwork = (artwork) => {
     resetZoom();
@@ -201,7 +200,7 @@ const showArtwork = (artwork) => {
     viewerImages.scrollTop = 0;
 };
 
-const openViewer = (artwork) => {
+const showViewer = (artwork) => {
     currentIndex = allArtworks.findIndex((a) => a.id === artwork.id);
     showArtwork(artwork);
     viewer.classList.add("is-open");
@@ -209,7 +208,7 @@ const openViewer = (artwork) => {
     document.body.style.overflow = "hidden";
 };
 
-const closeViewer = () => {
+const hideViewer = () => {
     resetZoom();
     viewer.classList.remove("is-open");
     viewer.setAttribute("aria-hidden", "true");
@@ -218,11 +217,56 @@ const closeViewer = () => {
     currentIndex = -1;
 };
 
+// Public actions — these update the URL hash, and the hashchange listener
+// below does the actual viewer work. That keeps back-button + direct-URL +
+// click-to-open all going through the same code path.
+
+const openViewer = (artwork) => {
+    if (location.hash === `#${artwork.id}`) {
+        // Hash already matches (e.g. on initial page load) — open directly
+        showViewer(artwork);
+    } else {
+        location.hash = `#${artwork.id}`;
+    }
+};
+
+const closeViewer = () => {
+    if (location.hash) {
+        // Going back removes the hash and triggers hashchange, which hides the viewer
+        history.back();
+    } else {
+        hideViewer();
+    }
+};
+
 const navigateViewer = (direction) => {
     const nextIndex = currentIndex + direction;
     if (nextIndex < 0 || nextIndex >= allArtworks.length) return;
+    // replaceState swaps the hash without adding a history entry, so the
+    // back button still closes the viewer in one step regardless of how
+    // many artworks you arrowed through.
+    isHandlingHashChange = true;
+    history.replaceState(null, "", `#${allArtworks[nextIndex].id}`);
+    isHandlingHashChange = false;
     currentIndex = nextIndex;
     showArtwork(allArtworks[currentIndex]);
+};
+
+const handleHashChange = () => {
+    if (isHandlingHashChange) return;
+    const hash = location.hash.replace(/^#/, "");
+    if (!hash) {
+        if (viewer.classList.contains("is-open")) hideViewer();
+        return;
+    }
+    const artwork = allArtworks.find((a) => String(a.id) === hash);
+    if (artwork) {
+        showViewer(artwork);
+    } else {
+        // Stale or invalid hash — clean it up
+        history.replaceState(null, "", location.pathname + location.search);
+        if (viewer.classList.contains("is-open")) hideViewer();
+    }
 };
 
 // ---------------------------------------------------------------------------
@@ -304,6 +348,9 @@ const loadGallery = async () => {
     }
 
     renderGallery(allArtworks);
+
+    // If the page was loaded with a hash (#42), open that artwork now
+    if (location.hash) handleHashChange();
 };
 
 // ---------------------------------------------------------------------------
@@ -312,6 +359,8 @@ const loadGallery = async () => {
 
 viewerClose.addEventListener("click", closeViewer);
 viewerBackdrop.addEventListener("click", closeViewer);
+
+window.addEventListener("hashchange", handleHashChange);
 
 viewer.addEventListener("click", (event) => {
     const target = event.target;
@@ -343,46 +392,6 @@ document.addEventListener("keydown", (event) => {
     if (event.key === "ArrowLeft") { event.preventDefault(); navigateViewer(-1); }
     if (event.key === "ArrowRight") { event.preventDefault(); navigateViewer(1); }
 });
-
-// Swipe navigation (mobile) with direction locking
-viewer.addEventListener("touchstart", (event) => {
-    if (event.touches.length !== 1 || zoomedImage) return;
-    touchStartX = event.touches[0].clientX;
-    touchStartY = event.touches[0].clientY;
-    touchStartTime = Date.now();
-    isSwiping = false;
-    touchDirectionLocked = false;
-}, { passive: true });
-
-viewer.addEventListener("touchmove", (event) => {
-    if (event.touches.length !== 1 || zoomedImage || touchDirectionLocked) return;
-
-    const dx = event.touches[0].clientX - touchStartX;
-    const dy = event.touches[0].clientY - touchStartY;
-    const absDx = Math.abs(dx);
-    const absDy = Math.abs(dy);
-
-    if (absDx < 10 && absDy < 10) return;
-
-    if (absDy > absDx) {
-        touchDirectionLocked = true;
-        isSwiping = false;
-        return;
-    }
-
-    if (absDx > 30 && absDx > absDy * 2) {
-        isSwiping = true;
-    }
-}, { passive: true });
-
-viewer.addEventListener("touchend", (event) => {
-    if (!isSwiping || zoomedImage) return;
-    const dx = event.changedTouches[0].clientX - touchStartX;
-    if (Math.abs(dx) > 60 && (Date.now() - touchStartTime) < 400) {
-        navigateViewer(dx > 0 ? -1 : 1);
-    }
-    isSwiping = false;
-}, { passive: true });
 
 // Boot
 loadGallery();
