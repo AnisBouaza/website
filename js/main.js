@@ -49,12 +49,6 @@ let touchStartTime = 0;
 let isSwiping = false;
 let touchDirectionLocked = false;
 
-// Pinch-zoom state (mobile)
-let pinchStartDist = 0;
-let pinchScale = 1;
-let isPinching = false;
-let pinchTarget = null;
-
 // ---------------------------------------------------------------------------
 // Fade-in animation
 // ---------------------------------------------------------------------------
@@ -119,7 +113,7 @@ const renderTags = (container, tags) => {
 };
 
 // ---------------------------------------------------------------------------
-// Zoom (desktop: click-to-zoom, mobile: pinch-to-zoom)
+// Zoom (desktop only: click-to-zoom; mobile uses native browser pinch-zoom)
 // ---------------------------------------------------------------------------
 
 const resetZoom = () => {
@@ -131,7 +125,6 @@ const resetZoom = () => {
     image.classList.remove("is-zoomed");
     image.style.transform = "";
     zoomedImage = null;
-    pinchScale = 1;
 
     window.setTimeout(() => {
         image.style.transformOrigin = "center center";
@@ -158,17 +151,6 @@ const toggleZoom = (image, event) => {
     zoomedImage = image;
 };
 
-const getPinchDist = (touches) => {
-    const dx = touches[0].clientX - touches[1].clientX;
-    const dy = touches[0].clientY - touches[1].clientY;
-    return Math.sqrt(dx * dx + dy * dy);
-};
-
-const getPinchCenter = (touches) => ({
-    x: (touches[0].clientX + touches[1].clientX) / 2,
-    y: (touches[0].clientY + touches[1].clientY) / 2,
-});
-
 // ---------------------------------------------------------------------------
 // Viewer image creation
 // ---------------------------------------------------------------------------
@@ -182,7 +164,7 @@ const createViewerImage = (src, alt) => {
     image.alt = alt;
     image.draggable = false;
 
-    // Desktop click-to-zoom only
+    // Desktop click-to-zoom only (mobile uses native browser pinch-zoom)
     image.addEventListener("click", (event) => {
         event.stopPropagation();
         if (!isMobile()) toggleZoom(image, event);
@@ -192,65 +174,6 @@ const createViewerImage = (src, alt) => {
     image.addEventListener("mousemove", (event) => {
         if (zoomedImage === image) {
             zoomedImage.style.transformOrigin = getZoomOrigin(image, event.clientX, event.clientY);
-        }
-    });
-
-    // Mobile pinch-to-zoom — smooth with transition control
-    image.addEventListener("touchstart", (event) => {
-        if (event.touches.length === 2) {
-            isPinching = true;
-            pinchTarget = image;
-            pinchStartDist = getPinchDist(event.touches);
-
-            // Disable CSS transition during active pinch for responsive feel
-            image.style.transition = "none";
-
-            const center = getPinchCenter(event.touches);
-            image.style.transformOrigin = getZoomOrigin(image, center.x, center.y);
-
-            // If already zoomed, start from current scale
-            if (zoomedImage !== image) {
-                pinchScale = 1;
-            }
-        }
-    }, { passive: true });
-
-    image.addEventListener("touchmove", (event) => {
-        if (isPinching && event.touches.length === 2 && pinchTarget === image) {
-            event.preventDefault();
-            const dist = getPinchDist(event.touches);
-            const rawScale = dist / pinchStartDist;
-
-            // Smooth scale from current base
-            pinchScale = Math.max(1, Math.min(5, rawScale * (zoomedImage === image ? 2.2 : 1)));
-
-            image.style.transform = `scale(${pinchScale})`;
-
-            if (pinchScale > 1.05) {
-                image.classList.add("is-zoomed");
-                zoomedImage = image;
-                const center = getPinchCenter(event.touches);
-                image.style.transformOrigin = getZoomOrigin(image, center.x, center.y);
-            }
-        }
-    }, { passive: false });
-
-    image.addEventListener("touchend", () => {
-        if (isPinching) {
-            isPinching = false;
-            pinchTarget = null;
-
-            // Re-enable smooth transition for snap-back
-            image.style.transition = "";
-
-            if (pinchScale <= 1.3) {
-                // Snap back to normal smoothly
-                resetZoom();
-            } else {
-                // Snap to standard 2.2x zoom level smoothly
-                image.style.transform = "";
-                pinchScale = 1;
-            }
         }
     });
 

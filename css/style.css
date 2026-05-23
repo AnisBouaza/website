@@ -838,7 +838,7 @@ textarea {
         gap: 0.8rem;
     }
 
-    /* Viewer mobile — entire viewer scrolls, images fill width */
+    /* Viewer mobile — entire viewer scrolls, images fill width edge-to-edge */
     .viewer {
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
@@ -849,13 +849,14 @@ textarea {
     }
 
     .viewer-content {
-        gap: 0.6rem;
-        padding: 2.8rem 0.4rem 1.5rem;
+        display: block;
+        gap: 0;
+        padding: 2.8rem 0 1.5rem;
         min-height: auto;
     }
 
     .viewer-info {
-        padding: 0 0.4rem;
+        padding: 0 1rem 0.8rem;
     }
 
     .viewer-info .tag-list {
@@ -876,24 +877,46 @@ textarea {
         right: 0.8rem;
     }
 
+    .viewer-image-wrap {
+        width: 100%;
+    }
+
     .viewer-images {
+        display: block;
         max-height: none;
-        overflow-y: visible;
-        padding-right: 0;
-        gap: 0.8rem;
+        overflow: visible;
+        padding: 0;
+        gap: 0;
     }
 
     .viewer-image-item {
-        justify-content: center;
-        align-items: center;
+        display: block;
+        width: 100%;
+        margin-bottom: 0.6rem;
+        overflow: visible;
+    }
+
+    .viewer-image-item:last-child {
+        margin-bottom: 0;
     }
 
     .viewer-image-item img {
+        width: 100%;
         max-width: 100%;
-        max-height: 85vh;
-        width: auto;
+        max-height: none;
         height: auto;
-        object-fit: contain;
+        display: block;
+        margin: 0;
+        cursor: default;
+        transform: none;
+        transition: none;
+        touch-action: pan-x pan-y pinch-zoom;
+    }
+
+    .viewer-image-item img.is-zoomed {
+        cursor: default;
+        transform: none;
+        touch-action: pan-x pan-y pinch-zoom;
     }
 
     .dashboard-row {
@@ -947,7 +970,7 @@ textarea {
     }
 
     .viewer-content {
-        padding: 2.5rem 0.4rem 1rem;
+        padding: 2.5rem 0 1rem;
     }
 
     .dashboard-actions {
