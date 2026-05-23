@@ -1,5 +1,36 @@
 [
     {
+        "id": "ee68a37c-5d0a-406e-8318-74d42409f390",
+        "title": "Concept Art of Tomtes",
+        "description": "Some early concept art work for a game studio",
+        "tags": [
+            "Concept Art",
+            "Drawing",
+            "Character"
+        ],
+        "image_path": "/uploads/57f66fe5c5e047ff8931de81211218ca-Tomtes.png",
+        "image_paths": [
+            "/uploads/57f66fe5c5e047ff8931de81211218ca-Tomtes.png",
+            "/uploads/1411b53d29234974b1afe8c41acf87af-Tomtes2.png"
+        ]
+    },
+    {
+        "id": "090aae38-8395-4a89-9bc1-ea87d2f84d5c",
+        "title": "Haykel, The Bone Eater",
+        "description": "OC of mine for an RP game",
+        "tags": [
+            "Concept Art",
+            "Drawing",
+            "Character"
+        ],
+        "image_path": "/uploads/6bcb54ea52bb4365bcb377b56a6194f5-beardedV---final.jpg",
+        "image_paths": [
+            "/uploads/6bcb54ea52bb4365bcb377b56a6194f5-beardedV---final.jpg",
+            "/uploads/f2d8fe741bf34f0c9d5f1fdcdbbdb587-beardedV---values.jpg",
+            "/uploads/dad17f3885864f14a95ecee5ee7ddb27-beardedV--lines.jpg"
+        ]
+    },
+    {
         "id": "bf092a3c-158b-45ab-9d45-014758aa2d71",
         "title": "JJK Drawings",
         "description": "Some drawings from JJK manga",
@@ -17,24 +48,26 @@
         ]
     },
     {
-        "id": "6ce6d657-fa9e-463d-ad42-bafa9b613ad5",
+        "id": "3615e08a-ae86-4f70-bb71-673e12c53320",
         "title": "Medivh",
         "description": "",
         "tags": [
-            "Fanart",
-            "Drawing"
+            "Drawing",
+            "Character",
+            "Drapery",
+            "Fanart"
         ],
-        "image_path": "/uploads/d40f95b412f141af818709ea7c40950a-medivh.png"
+        "image_path": "/uploads/40f4db7c7b53470a883bb840c32a710a-medivh.png.jpg"
     },
     {
-        "id": "0784d952-2b10-4291-a2b7-74810fa7da1c",
+        "id": "dd2c2fc1-20fa-4ae5-8d8a-6c48d7ad04e7",
         "title": "Illidan Stormrage",
         "description": "",
         "tags": [
             "Drawing",
             "Fanart"
         ],
-        "image_path": "/uploads/cb84af6798f84fe4a6d406a9fddaf97e-illidan.png"
+        "image_path": "/uploads/70d90017ea6345fd91fdeb4f1929d30d-illidan.png.jpg"
     },
     {
         "id": "38cf1cbf-50db-4296-965c-158568184d27",
